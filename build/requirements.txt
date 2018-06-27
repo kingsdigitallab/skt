@@ -1,0 +1,6 @@
+# conda -n sanskrit1 python=2.7
+# . activate sanskrit1
+# conda install --yes --file build/requirements.txt
+pandas
+tensorflow=1.8.0=py27_1
+tqdm
