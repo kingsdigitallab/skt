@@ -1,3 +1,11 @@
+This Fork
+---------
+
+This fork is an update the original code (see description below) to make it compatible with Python 3.6 and Tensorflow 1.8.0.
+
+Original Description
+--------------------
+
 # Sanskrit compound segmentation using seq2seq model 
 Code for the paper titled ['Building a Word Segmenter for Sanskrit Overnight'](https://arxiv.org/abs/1802.06185)
 
