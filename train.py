@@ -8,7 +8,9 @@ import numpy as np
 import random
 from tqdm import tqdm # ProgressBar for loops
                                                                                                             
-from tensorflow.python.ops import rnn_cell, seq2seq
+# from tensorflow.python.ops import rnn_cell, seq2seq
+from tensorflow.contrib.rnn import DropoutWrapper, BasicLSTMCell, MultiRNNCell
+from tensorflow.contrib import legacy_seq2seq as seq2seq
 from utils.data_loader import SKTDataLoader
 
 #import os
@@ -43,9 +45,9 @@ num_train_batches = int(train_set_size*1.0/batch_size) # Number of train batches
 num_valid_batches = int(valid_set_size*1.0/batch_size)
 num_test_batches = int(test_set_size*1.0/batch_size)
 
-print "Vocab Size: " + str(vocab_size)
-print "Data Size: " + str(data_size)
-print train_set_size, valid_set_size, test_set_size
+print("Vocab Size: " + str(vocab_size))
+print("Data Size: " + str(data_size))
+print(train_set_size, valid_set_size, test_set_size)
 
 
 # In[4]:
@@ -65,11 +67,11 @@ with tf.name_scope('dropout'):
 
 # In[5]:
 
-cells = [rnn_cell.DropoutWrapper(
-        rnn_cell.BasicLSTMCell(num_hidden), output_keep_prob=keep_prob
+cells = [DropoutWrapper(
+        BasicLSTMCell(num_hidden), output_keep_prob=keep_prob
     ) for i in range(num_layers)]
 
-stacked_lstm = rnn_cell.MultiRNNCell(cells)
+stacked_lstm = MultiRNNCell(cells)
 
 with tf.variable_scope("decoders") as scope:
     decode_outputs, decode_state = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden)
@@ -85,7 +87,7 @@ with tf.name_scope('loss'):
     loss_weights = [tf.ones_like(l, dtype=tf.float32) for l in labels]
     loss = seq2seq.sequence_loss(decode_outputs, labels, loss_weights, vocab_size)
 
-tf.scalar_summary('loss', loss)
+tf.summary.scalar('loss', loss)
 
 
 # In[7]:
@@ -96,12 +98,19 @@ train = optimizer.minimize(loss)
 
 # In[8]:
 
-init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
-sess = tf.InteractiveSession()
-merged = tf.merge_all_summaries()
-summary_writer = tf.train.SummaryWriter('logs/' + model_name , sess.graph)
+
+config = None
+if 1:
+    config = tf.ConfigProto()
+    config.gpu_options.visible_device_list = "0" # (the gpu device that can be used)
+    config.gpu_options.per_process_gpu_memory_fraction = 0.5 # (the percentage of memory used)
+
+sess = tf.InteractiveSession(config=config)
+merged = tf.summary.merge_all()
+summary_writer = tf.summary.FileWriter('logs/' + model_name , sess.graph)
 
 sess.run(init)
 #saver.restore(sess, 'models/' + model_name)
@@ -142,7 +151,7 @@ try:
 
         if epoch % verbose == 0:
             log_txt = "Epoch: " + str(epoch) + " Steps: " + str(step) + " train_loss: " + str(round(np.mean(train_losses),4)) + '+' + str(round(np.std(train_losses),2)) +                 " valid_loss: " + str(round(np.mean(valid_losses),4)) + '+' + str(round(np.std(valid_losses),2)) 
-            print log_txt
+            print(log_txt)
 
             f = open('log.txt', 'a')
             f.write(log_txt + '\n')
@@ -150,6 +159,6 @@ try:
 
             saver.save(sess, 'models/' + model_name)
 except KeyboardInterrupt:
-    print "Stopped at epoch: " + str(epoch) + ' and step: ' + str(step)
+    print("Stopped at epoch: " + str(epoch) + ' and step: ' + str(step))
 
-print "Training completed"
+print("Training completed")

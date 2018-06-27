@@ -63,7 +63,7 @@ class SKTDataLoader(object):
         self.data_path = self.base_path + '_data.npy' 
         if os.path.isfile(self.data_path): # If the indices file is present => load 
             complete_data = np.load(self.data_path)
-            print "Loaded complete data"
+            print("Loaded complete data")
             return complete_data
             
         complete_data = []  
@@ -72,7 +72,7 @@ class SKTDataLoader(object):
             outp = outp.split()
             complete_data.append([inp, outp])
         np.save(self.data_path, complete_data)
-        print "Saved and loaded complete data"
+        print("Saved and loaded complete data")
         return complete_data
         
     def index_vocab(self):
@@ -89,7 +89,7 @@ class SKTDataLoader(object):
         if os.path.isfile(word2idx_path) and os.path.isfile(idx2word_path): # If the vocab file is present => load and return only list of words
             word2idx = np.load(word2idx_path).item()
             idx2word = np.load(idx2word_path).item()
-            print "Loaded word2idx and idx2word"
+            print("Loaded word2idx and idx2word")
             return idx2word, word2idx
         
         for i, word in enumerate(self.vocab_dict):
@@ -97,7 +97,7 @@ class SKTDataLoader(object):
             idx2word[i] = word
         np.save(word2idx_path, word2idx)
         np.save(idx2word_path, idx2word)
-        print "Saved and loaded word2idx and idx2word"
+        print("Saved and loaded word2idx and idx2word")
         return idx2word, word2idx
                 
     def vocab(self):
@@ -110,23 +110,27 @@ class SKTDataLoader(object):
         if os.path.isfile(self.vocab_path): # If the vocab file is present => load and return only list of words
             vocab = np.load(self.vocab_path)
             vocab_list = vocab.item().keys()
+            print("Loaded vocab")
+        else:
+            vocab = {}
+            for inp, outp in self.complete_data: # uses all the data to create vocab
+                words = inp + outp
+                for word in words:
+                    if word in vocab.keys():
+                        vocab[word] += 1
+                    else:
+                        vocab[word] = 1
+            np.save(self.vocab_path, vocab)
+            print("Saved and Loaded vocab")
+
+            vocab_list = vocab.keys()
+        
+        if 0:
             vocab_list.sort()
-            print "Loaded vocab"
             return vocab_list
-        vocab = {}
-        for inp, outp in self.complete_data: # uses all the data to create vocab
-            words = inp + outp
-            for word in words:
-                if word in vocab.keys():
-                    vocab[word] += 1
-                else:
-                    vocab[word] = 1
-        np.save(self.vocab_path, vocab)
-        vocab_list = vocab.keys()
-        vocab_list.sort()
-        print "Saved and Loaded vocab"
-        return vocab_list
-    
+
+        return sorted(list(vocab_list))
+
     def make_data(self):
         """
             Uses the complete_data and samples data that statisfies seq_length
@@ -146,7 +150,7 @@ class SKTDataLoader(object):
         if os.path.isfile(self.data_indices_path): # If the indices file is present => load 
             self.data_indices = np.load(self.data_indices_path)
         else: # Else create indices now and store
-            self.data_indices = range(self.data_size)
+            self.data_indices = list(range(self.data_size))
             shuffle(self.data_indices)
             np.save(self.data_indices_path, self.data_indices)
             
@@ -159,7 +163,7 @@ class SKTDataLoader(object):
         self.valid_data = [self.data[x] for x in self.valid_indices]
         self.test_data = [self.data[x] for x in self.test_indices]
         
-        print "Created dataset"
+        print("Created dataset")
         return {'train': self.train_data, 'valid': self.valid_data, 'test': self.test_data}
                 
     def reset_index(self, data_type='train'):
