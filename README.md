@@ -3,6 +3,8 @@ This Fork
 
 This fork is an update the original code (see description below) to make it compatible with Python 3.6 and Tensorflow 1.8.0.
 
+See build/requirements.txt for python dependencies.
+
 Original Description
 --------------------
 
