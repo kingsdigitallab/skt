@@ -1,4 +1,3 @@
-
 # coding: utf-8
 
 # In[1]:
@@ -62,14 +61,18 @@ with tf.name_scope('decode_input'):
     decode_input = [tf.zeros_like(encode_input[0], dtype=np.int32, name="GO")] + labels[:-1]
     
 with tf.name_scope('dropout'):
-    keep_prob = tf.placeholder("float", name='keep_prob')
+    keep_prob = tf.placeholder("float32", name='keep_prob')
 
 
 # In[5]:
 
-cells = [DropoutWrapper(
-        BasicLSTMCell(num_hidden), output_keep_prob=keep_prob
-    ) for i in range(num_layers)]
+cells = [
+    DropoutWrapper(
+        BasicLSTMCell(num_hidden), 
+        output_keep_prob=keep_prob
+    )
+    for i in range(num_layers)
+]
 
 stacked_lstm = MultiRNNCell(cells)
 
