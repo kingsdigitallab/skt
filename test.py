@@ -8,7 +8,8 @@ import numpy as np
 import random
 from tqdm import tqdm # ProgressBar for loops
 																											
-from tensorflow.python.ops import rnn_cell, seq2seq
+from tensorflow.contrib.rnn import DropoutWrapper, BasicLSTMCell, MultiRNNCell
+from tensorflow.contrib import legacy_seq2seq as seq2seq
 from utils.data_loader import SKTDataLoader
 
 # import os
@@ -63,14 +64,16 @@ with tf.name_scope('dropout'):
 
 # In[5]:
 
-cells = [rnn_cell.DropoutWrapper(
-		rnn_cell.BasicLSTMCell(num_hidden), output_keep_prob=keep_prob
-	) for i in range(num_layers)]
+cells = [
+	DropoutWrapper(
+		BasicLSTMCell(num_hidden), output_keep_prob=keep_prob
+	) for i in range(num_layers)
+]
 
-stacked_lstm = rnn_cell.MultiRNNCell(cells)
+stacked_lstm = MultiRNNCell(cells)
 
 with tf.variable_scope("decoders") as scope:
-	decode_outputs, decode_state = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden)
+    decode_outputs, decode_state = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden)
 
     scope.reuse_variables()
 
@@ -83,7 +86,7 @@ with tf.name_scope('loss'):
 	loss_weights = [tf.ones_like(l, dtype=tf.float32) for l in labels]
 	loss = seq2seq.sequence_loss(decode_outputs, labels, loss_weights, vocab_size)
 
-tf.scalar_summary('loss', loss)
+tf.summary.scalar('loss', loss)
 
 
 # In[7]:
@@ -98,8 +101,10 @@ init = tf.initialize_all_variables()
 saver = tf.train.Saver()
 
 sess = tf.InteractiveSession()
-merged = tf.merge_all_summaries()
-summary_writer = tf.train.SummaryWriter('logs/' + model_name , sess.graph)
+#merged = tf.merge_all_summaries()
+merged = tf.summary.merge_all()
+# summary_writer = tf.train.SummaryWriter('logs/' + model_name , sess.graph)
+summary_writer = tf.summary.FileWriter('logs/' + model_name , sess.graph)
 
 sess.run(init)
 saver.restore(sess, 'models/' + model_name)
