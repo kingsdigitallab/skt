@@ -8,91 +8,22 @@ import numpy as np
 import random
 from tqdm import tqdm # ProgressBar for loops
 																											
-from tensorflow.contrib.rnn import DropoutWrapper, BasicLSTMCell, MultiRNNCell
-from tensorflow.contrib import legacy_seq2seq as seq2seq
-from utils.data_loader import SKTDataLoader
-
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"]=""
 
+import arch
+from arch import (
+    model_name, num_train_batches, data_loader, 
+    encode_input, seq_length, labels, keep_prob_val,
+	keep_prob,
+    loss, num_valid_batches, learning_rate,
+	test_set_size, decode_outputs_test,
+	vocab_size, num_layers
+)
 
 # In[2]:
-
-num_layers = 3   # Number of layers of RNN
-num_hidden = 128  # Hidden size of RNN cell
-batch_size = 1  # Number of sentences in a batch
-seq_length = 35  # Length of sequence
-split = [0, 0, 1] # Splitting proportions into train, valid, test
-learning_rate = 0.001
-
-model_name = 'attn_3_8000_0.8_trainonly' # Name is <num_layers>_<sentencepiece_vocabsize>_<keep_prob>
-
-
-# In[3]:
-
-data_loader = SKTDataLoader('data/dcs_data_input_test_sent.txt','data/dcs_data_output_test_sent.txt',batch_size,seq_length, split=split)
-vocab_size =  data_loader.vocab_size   # Number of unique words in dataset
-
-data_size = data_loader.data_size      # Number of paris in the entire dataset
-train_set_size = data_loader.train_size# Number of pairs in train set
-valid_set_size = data_loader.valid_size# Number of pairs in valid set
-test_set_size = data_loader.test_size  # Number of pairs in test set
-
-num_train_batches = int(train_set_size*1.0/batch_size) # Number of train batches1
-num_valid_batches = int(valid_set_size*1.0/batch_size)
+batch_size = 1
 num_test_batches = int(test_set_size*1.0/batch_size)
-
-print "Vocab Size: " + str(vocab_size)
-print "Data Size: " + str(data_size)
-print train_set_size, valid_set_size, test_set_size
-
-
-# In[4]:
-
-with tf.name_scope('encode_input'):
-	encode_input = [tf.placeholder(tf.int32, shape=(None,), name = "ei_%i" %i) for i in range(seq_length)]
-
-with tf.name_scope('labels'):
-	labels = [tf.placeholder(tf.int32, shape=(None,), name = "l_%i" %i) for i in range(seq_length)]
-
-with tf.name_scope('decode_input'):
-	decode_input = [tf.zeros_like(encode_input[0], dtype=np.int32, name="GO")] + labels[:-1]
-	
-with tf.name_scope('dropout'):
-	keep_prob = tf.placeholder("float", name='keep_prob')
-
-
-# In[5]:
-
-cells = [
-	DropoutWrapper(
-		BasicLSTMCell(num_hidden), output_keep_prob=keep_prob
-	) for i in range(num_layers)
-]
-
-stacked_lstm = MultiRNNCell(cells)
-
-with tf.variable_scope("decoders") as scope:
-    decode_outputs, decode_state = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden)
-
-    scope.reuse_variables()
-
-    decode_outputs_test, decode_state_test = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden, feed_previous=True)
-    
-
-# In[6]:
-
-with tf.name_scope('loss'):
-	loss_weights = [tf.ones_like(l, dtype=tf.float32) for l in labels]
-	loss = seq2seq.sequence_loss(decode_outputs, labels, loss_weights, vocab_size)
-
-tf.summary.scalar('loss', loss)
-
-
-# In[7]:
-
-optimizer = tf.train.AdamOptimizer(learning_rate)
-train = optimizer.minimize(loss)
 
 
 # In[8]:
@@ -108,7 +39,6 @@ summary_writer = tf.summary.FileWriter('logs/' + model_name , sess.graph)
 
 sess.run(init)
 saver.restore(sess, 'models/' + model_name)
-
 
 # In[10]:
 
@@ -179,7 +109,8 @@ precisions = []
 recalls = []
 accuracies = []
 
-f = open('output_3_attn_1_do_0.3.txt', 'a')
+log_name = 'logs/attn_{}_{}_{:.2f}_test.log'.format(num_layers, vocab_size, keep_prob_val)
+f = open('log_name', 'a')
 
 for inp, outp, gen in zip(X_test, y_test, y_out):
 
@@ -199,13 +130,13 @@ for inp, outp, gen in zip(X_test, y_test, y_out):
 	precisions.append(prec)
 	recalls.append(recall)
 
-	# print inp_raw
-	# print outp_raw
-	# print gen_raw
-	# print prec
-	# print recall
-
-	log_line = str(inp_raw).replace('\n', '').lstrip() + ';' + str(outp_raw).replace('\n', '').lstrip() + ';' + str(gen_raw).replace('\n', '').lstrip() + ';' + str(prec).replace('\n', '') + ';' + str(recall).replace('\n', '') + '\n'
+	log_line = '; '.join([
+		str(inp_raw).replace('\n', '').lstrip(),
+		str(outp_raw).replace('\n', '').lstrip(),
+		str(gen_raw).replace('\n', '').lstrip(),
+		str(prec).replace('\n', ''),
+		str(recall).replace('\n', '')
+	]) + '\n'
 
 	f.write(log_line)
 
