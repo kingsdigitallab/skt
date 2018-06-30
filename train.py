@@ -3,91 +3,96 @@
 
 # In[1]:
 
-import numpy as np
-import tensorflow as tf
-import random
-from tqdm import tqdm # ProgressBar for loops
-                                                                                                            
-# from tensorflow.python.ops import rnn_cell, seq2seq
+def train():
 
-#import os
-#os.environ["CUDA_VISIBLE_DEVICES"]=""
+    import numpy as np
+    import tensorflow as tf
+    import random
+    from tqdm import tqdm # ProgressBar for loops
+                                                                                                                
+    # from tensorflow.python.ops import rnn_cell, seq2seq
 
-# In[2]:
+    #import os
+    #os.environ["CUDA_VISIBLE_DEVICES"]=""
 
-import arch
-from arch import (
-    model_name, num_train_batches, data_loader, 
-    encode_input, seq_length, labels, keep_prob_val,
-    loss, num_valid_batches, learning_rate, keep_prob
-)
+    # In[2]:
 
-# In[7]:
+    import arch
+    from arch import (
+        model_name, num_train_batches, data_loader, 
+        encode_input, seq_length, labels, keep_prob_val,
+        loss, num_valid_batches, learning_rate, keep_prob
+    )
 
-optimizer = tf.train.AdamOptimizer(learning_rate)
-train = optimizer.minimize(loss)
+    # In[7]:
 
-num_epochs = 100
-#num_epochs = 1
-verbose = 1      # Display every <verbose> epochs
+    optimizer = tf.train.AdamOptimizer(learning_rate)
+    train = optimizer.minimize(loss)
 
-# In[8]:
+    num_epochs = 100
+    #num_epochs = 1
+    verbose = 20      # Display every <verbose> epochs
 
-init = tf.global_variables_initializer()
-saver = tf.train.Saver()
+    # In[8]:
 
-config = arch.config
+    init = tf.global_variables_initializer()
+    saver = tf.train.Saver()
 
-sess = tf.InteractiveSession(config=config)
-merged = tf.summary.merge_all()
-summary_writer = tf.summary.FileWriter('logs/' + model_name , sess.graph)
+    config = arch.config
 
-sess.run(init)
-#saver.restore(sess, 'models/' + model_name)
+    sess = tf.InteractiveSession(config=config)
+    merged = tf.summary.merge_all()
+    summary_writer = tf.summary.FileWriter('logs/' + model_name , sess.graph)
 
-# In[9]:
+    sess.run(init)
+    saver.restore(sess, 'models/' + model_name)
 
-step = 0
-try:
-    for epoch in range(num_epochs):
-        train_losses = []
-        valid_losses = []
+    # In[9]:
 
-        # Training on train set
-        for i in tqdm(range(num_train_batches)):
-            batch_inp, batch_outp = data_loader.next_batch()
+    step = 0
+    try:
+        for epoch in range(num_epochs):
+            train_losses = []
+            valid_losses = []
 
-            input_dict = {encode_input[t]: batch_inp[t] for t in range(seq_length)}
-            input_dict.update({labels[t]: batch_outp[t] for t in range(seq_length)})
-            input_dict[keep_prob] = keep_prob_val
+            # Training on train set
+            for i in tqdm(range(num_train_batches)):
+                batch_inp, batch_outp = data_loader.next_batch()
 
-            _, loss_val, summary = sess.run([train, loss, merged], feed_dict=input_dict)
-            train_losses.append(loss_val)
+                input_dict = {encode_input[t]: batch_inp[t] for t in range(seq_length)}
+                input_dict.update({labels[t]: batch_outp[t] for t in range(seq_length)})
+                input_dict[keep_prob] = keep_prob_val
 
-            summary_writer.add_summary(summary, step)
-            step += 1
+                _, loss_val, summary = sess.run([train, loss, merged], feed_dict=input_dict)
+                train_losses.append(loss_val)
 
-        # Testing on valid set
-        for i in range(num_valid_batches):
-            batch_inp, batch_outp = data_loader.next_batch(data_type='valid')
+                summary_writer.add_summary(summary, step)
+                step += 1
 
-            input_dict = {encode_input[t]: batch_inp[t] for t in range(seq_length)}
-            input_dict.update({labels[t]: batch_outp[t] for t in range(seq_length)})
-            input_dict[keep_prob] = 1.0
+            # Testing on valid set
+            for i in range(num_valid_batches):
+                batch_inp, batch_outp = data_loader.next_batch(data_type='valid')
 
-            loss_val = sess.run(loss, feed_dict=input_dict)
-            valid_losses.append(loss_val)
+                input_dict = {encode_input[t]: batch_inp[t] for t in range(seq_length)}
+                input_dict.update({labels[t]: batch_outp[t] for t in range(seq_length)})
+                input_dict[keep_prob] = 1.0
 
-        if epoch % verbose == 0:
-            log_txt = "Epoch: " + str(epoch) + " Steps: " + str(step) + " train_loss: " + str(round(np.mean(train_losses),4)) + '+' + str(round(np.std(train_losses),2)) +                 " valid_loss: " + str(round(np.mean(valid_losses),4)) + '+' + str(round(np.std(valid_losses),2)) 
-            print(log_txt)
+                loss_val = sess.run(loss, feed_dict=input_dict)
+                valid_losses.append(loss_val)
 
-            f = open('log.txt', 'a')
-            f.write(log_txt + '\n')
-            f.close()
+            if epoch % verbose == 0:
+                log_txt = "Epoch: " + str(epoch) + " Steps: " + str(step) + " train_loss: " + str(round(np.mean(train_losses),4)) + '+' + str(round(np.std(train_losses),2)) +                 " valid_loss: " + str(round(np.mean(valid_losses),4)) + '+' + str(round(np.std(valid_losses),2)) 
+                print(log_txt)
 
-            saver.save(sess, 'models/' + model_name)
-except KeyboardInterrupt:
-    print("Stopped at epoch: " + str(epoch) + ' and step: ' + str(step))
+                f = open('log.txt', 'a')
+                f.write(log_txt + '\n')
+                f.close()
 
-print("Training completed")
+                saver.save(sess, 'models/' + model_name)
+    except KeyboardInterrupt:
+        print("Stopped at epoch: " + str(epoch) + ' and step: ' + str(step))
+
+    print("Training completed")
+
+if __name__ == '__main__':
+    train()
