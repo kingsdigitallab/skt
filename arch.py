@@ -9,13 +9,17 @@ num_hidden = 128 # Hidden size of RNN cell
 batch_size = 128 # Number of sentences in a batch
 seq_length = 35 # Length of sequence
 split = [0.9, 0.1, 0] # Splitting proportions into train, valid, test
-# split = [0.02, 0.02, 0] # Splitting proportions into train, valid, test
 learning_rate = 0.001 # Initial learning rate
 keep_prob_val = 0.8 # keep_prob is 1 - dropout i.e., if dropout = 0.2, then keep_prob is 0.8
-#float_type=tf.float32
 float_type=tf.float32
-#int_type=tf.int32
 int_type=np.int32
+
+if 1:
+    num_layers = 2 # Number of layers of RNN
+    num_hidden = 64 # Hidden size of RNN cell
+    batch_size = 32 # Number of sentences in a batch
+    seq_length = 35 # Length of sequence
+    split = [0.02, 0.01, 0] # Splitting proportions into train, valid, test
 
 # Data loading
 

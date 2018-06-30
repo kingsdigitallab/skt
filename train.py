@@ -9,6 +9,7 @@ def train():
     import tensorflow as tf
     import random
     from tqdm import tqdm # ProgressBar for loops
+    from utils.data_loader import pt, load_dict, save_dict
                                                                                                                 
     # from tensorflow.python.ops import rnn_cell, seq2seq
 
@@ -26,17 +27,23 @@ def train():
 
     # In[7]:
 
+    pt('model defined')
+
     optimizer = tf.train.AdamOptimizer(learning_rate)
     train = optimizer.minimize(loss)
 
-    num_epochs = 100
+    pt('training defined')
+
+    num_epochs = 80
     #num_epochs = 1
-    verbose = 20      # Display every <verbose> epochs
+    verbose = 1      # Display every <verbose> epochs
 
     # In[8]:
 
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
+
+    pt('initialised')
 
     config = arch.config
 
@@ -44,14 +51,29 @@ def train():
     merged = tf.summary.merge_all()
     summary_writer = tf.summary.FileWriter('logs/' + model_name , sess.graph)
 
+    pt('session created')
+
+    model_path = 'models/' + model_name
+
     sess.run(init)
-    saver.restore(sess, 'models/' + model_name)
+    import os
+    try:
+        saver.restore(sess, model_path)
+    except tf.errors.NotFoundError:
+        pass
+
+    training_context = {
+        'epoch': 0,
+    }
+    training_context_path = '%s_training_context.json' % (model_path)
+    training_context = load_dict(training_context_path, training_context)
+    print(training_context)
 
     # In[9]:
 
     step = 0
     try:
-        for epoch in range(num_epochs):
+        while training_context['epoch'] < num_epochs:
             train_losses = []
             valid_losses = []
 
@@ -80,17 +102,21 @@ def train():
                 loss_val = sess.run(loss, feed_dict=input_dict)
                 valid_losses.append(loss_val)
 
-            if epoch % verbose == 0:
-                log_txt = "Epoch: " + str(epoch) + " Steps: " + str(step) + " train_loss: " + str(round(np.mean(train_losses),4)) + '+' + str(round(np.std(train_losses),2)) +                 " valid_loss: " + str(round(np.mean(valid_losses),4)) + '+' + str(round(np.std(valid_losses),2)) 
+            if training_context['epoch'] % verbose == 0:
+                log_txt = "Epoch: " + str(training_context['epoch']) + " Steps: " + str(step) + " train_loss: " + str(round(np.mean(train_losses),4)) + '+' + str(round(np.std(train_losses),2)) +                 " valid_loss: " + str(round(np.mean(valid_losses),4)) + '+' + str(round(np.std(valid_losses),2)) 
                 print(log_txt)
 
                 f = open('log.txt', 'a')
                 f.write(log_txt + '\n')
                 f.close()
 
-                saver.save(sess, 'models/' + model_name)
+                saver.save(sess, model_path)
+                save_dict(training_context_path, training_context)
+                            
+            training_context['epoch'] += 1
+
     except KeyboardInterrupt:
-        print("Stopped at epoch: " + str(epoch) + ' and step: ' + str(step))
+        print("Stopped at epoch: " + str(training_context['epoch']) + ' and step: ' + str(step))
 
     print("Training completed")
 

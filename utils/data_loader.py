@@ -125,10 +125,6 @@ class SKTDataLoader(object):
 
             vocab_list = vocab.keys()
         
-        if 0:
-            vocab_list.sort()
-            return vocab_list
-
         return sorted(list(vocab_list))
 
     def make_data(self):
@@ -163,7 +159,7 @@ class SKTDataLoader(object):
         self.valid_data = [self.data[x] for x in self.valid_indices]
         self.test_data = [self.data[x] for x in self.test_indices]
         
-        print("Created dataset")
+        print("Split dataset")
         return {'train': self.train_data, 'valid': self.valid_data, 'test': self.test_data}
                 
     def reset_index(self, data_type='train'):
@@ -233,3 +229,20 @@ class SKTDataLoader(object):
         batch_data = self.encode_batch(batch_data)
                
         return np.swapaxes(np.array(batch_data[0]), 0, 1), np.swapaxes(np.array(batch_data[1]), 0, 1)
+
+def load_dict(path, default_dict=None):
+    import json
+    ret = default_dict
+    if os.path.exists(path):
+        with open(path) as f:
+            ret = json.load(f)
+    return ret
+
+def save_dict(path, dict):
+    import json
+    with open(path, 'w') as f:
+        json.dump(dict, f)
+
+def pt(message=None):
+    from datetime import datetime
+    print('[%s] %s' % (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], message))
