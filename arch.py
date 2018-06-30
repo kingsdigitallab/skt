@@ -1,4 +1,6 @@
 from utils.data_loader import SKTDataLoader
+import tensorflow as tf
+import numpy as np
 
 num_layers = 3 # Number of layers of RNN
 num_hidden = 128 # Hidden size of RNN cell
@@ -8,7 +10,10 @@ split = [0.9, 0.1, 0] # Splitting proportions into train, valid, test
 #split = [0.2, 0.1, 0] # Splitting proportions into train, valid, test
 learning_rate = 0.001 # Initial learning rate
 keep_prob_val = 0.8 # keep_prob is 1 - dropout i.e., if dropout = 0.2, then keep_prob is 0.8
-
+#float_type=tf.float32
+float_type=tf.float32
+#int_type=tf.int32
+int_type=np.int32
 
 # In[3]:
 data_loader = SKTDataLoader('data/dcs_data_input_train_sent.txt','data/dcs_data_output_train_sent.txt',batch_size,seq_length, split=split)
@@ -32,20 +37,18 @@ model_name = 'attn_{}_{}_{:.2f}_trainonly'.format(num_layers, vocab_size, keep_p
 
 # In[4]:
 
-import numpy as np
-import tensorflow as tf
 from tensorflow.contrib.rnn import DropoutWrapper, BasicLSTMCell, MultiRNNCell
 from tensorflow.contrib import legacy_seq2seq as seq2seq
 
 
 with tf.name_scope('encode_input'):
-    encode_input = [tf.placeholder(tf.int32, shape=(None,), name = "ei_%i" %i) for i in range(seq_length)]
+    encode_input = [tf.placeholder(int_type, shape=(None,), name = "ei_%i" %i) for i in range(seq_length)]
 
 with tf.name_scope('labels'):
-    labels = [tf.placeholder(tf.int32, shape=(None,), name = "l_%i" %i) for i in range(seq_length)]
+    labels = [tf.placeholder(int_type, shape=(None,), name = "l_%i" %i) for i in range(seq_length)]
 
 with tf.name_scope('decode_input'):
-    decode_input = [tf.zeros_like(encode_input[0], dtype=np.int32, name="GO")] + labels[:-1]
+    decode_input = [tf.zeros_like(encode_input[0], dtype=int_type, name="GO")] + labels[:-1]
     
 with tf.name_scope('dropout'):
     keep_prob = tf.placeholder("float", name='keep_prob')
@@ -60,17 +63,17 @@ cells = [DropoutWrapper(
 stacked_lstm = MultiRNNCell(cells)
 
 with tf.variable_scope("decoders") as scope:
-    decode_outputs, decode_state = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden)
+    decode_outputs, decode_state = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden, dtype=float_type)
 
     scope.reuse_variables()
 
-    decode_outputs_test, decode_state_test = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden, feed_previous=True)
+    decode_outputs_test, decode_state_test = seq2seq.embedding_attention_seq2seq(encode_input, decode_input, stacked_lstm, vocab_size, vocab_size, num_hidden, dtype=float_type, feed_previous=True)
     
 
 # In[6]:
 
 with tf.name_scope('loss'):
-    loss_weights = [tf.ones_like(l, dtype=tf.float32) for l in labels]
+    loss_weights = [tf.ones_like(l, dtype=float_type) for l in labels]
     loss = seq2seq.sequence_loss(decode_outputs, labels, loss_weights, vocab_size)
 
 tf.summary.scalar('loss', loss)
