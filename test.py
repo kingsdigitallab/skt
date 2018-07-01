@@ -7,7 +7,8 @@ import tensorflow as tf
 import numpy as np
 import random
 from tqdm import tqdm # ProgressBar for loops
-																											
+from utils.data_loader import SKTDataLoader
+
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"]=""
 
@@ -21,10 +22,18 @@ from arch import (
 	vocab_size, num_layers
 )
 
+batch_size = 1
+vocab_size =  data_loader.vocab_size   # Number of unique words in dataset
+
+data_loader = SKTDataLoader('data/dcs_data_input_test_sent.txt','data/dcs_data_output_test_sent.txt',batch_size,seq_length, split=[0,0,1])
+
+
+data_size = data_loader.data_size      # Number of paris in the entire dataset
+test_set_size = data_loader.data_size  # Number of pairs in test set
+
 # In[2]:
 batch_size = 1
 num_test_batches = int(test_set_size*1.0/batch_size)
-
 
 # In[8]:
 
@@ -57,7 +66,7 @@ for i in range(num_test_batches):
 
 
 log_txt = "Test_loss: " + str(round(np.mean(test_losses), 4)) + '+' + str(round(np.std(test_losses), 2)) 
-print log_txt
+print(log_txt)
 
 f = open('log.txt', 'a')
 f.write(log_txt + '\n')

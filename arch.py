@@ -16,7 +16,7 @@ int_type=np.int32
 
 if 1:
     num_layers = 2 # Number of layers of RNN
-    num_hidden = 64 # Hidden size of RNN cell
+    num_hidden = 512 # Hidden size of RNN cell
     batch_size = 32 # Number of sentences in a batch
     seq_length = 35 # Length of sequence
     split = [0.02, 0.01, 0] # Splitting proportions into train, valid, test

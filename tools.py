@@ -7,8 +7,6 @@ path_rec = 'data8k/recons'
 path_data = 'data'
 data_names = 'dcs_data_output_train_sent.txt dcs_data_input_train_sent.txt dcs_data_input_test_sent.txt dcs_data_output_test_sent.txt'
 
-path_train = path_rec + '/' + data_names.split()[0]
-
 def show_help():
     print('''
 tools.py ACTION [ARG1] [ARG2] ...
@@ -80,6 +78,9 @@ if action == 'recons':
     # https://github.com/cltk/sanskrit_text_dcs.git
 
 if action == 'build-voc':
+    tmp_input_path = 'voc-input.tmp'
+    os.system('cat %s/%s %s/%s > %s' % (path_rec, data_names.split()[0], path_rec, data_names.split()[1], tmp_input_path))
+
     action_is_valid = True
     if args and args[0] != '8k':
         size = int(re.sub('\D', '', args[0])) * 1000
@@ -88,7 +89,7 @@ if action == 'build-voc':
         if not os.path.exists(path_out):
             os.makedirs(path_out)
 
-        spm.SentencePieceTrainer.Train('--input={} --model_prefix={}/m --vocab_size={}'.format(path_train, path_out, size))
+        spm.SentencePieceTrainer.Train('--input={} --model_prefix={}/m --vocab_size={}'.format(tmp_input_path, path_out, size))
     else:
         print('ERROR: please pass a vocabulary size. E.g. 10k, 4k, 6k. 8k not allowed!')
 
