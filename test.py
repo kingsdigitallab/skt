@@ -25,15 +25,17 @@ from arch import (
 batch_size = 1
 vocab_size =  data_loader.vocab_size   # Number of unique words in dataset
 
-data_loader = SKTDataLoader('data/dcs_data_input_test_sent.txt','data/dcs_data_output_test_sent.txt',batch_size,seq_length, split=[0,0,1])
+test_split = 0.01
 
-
-data_size = data_loader.data_size      # Number of paris in the entire dataset
-test_set_size = data_loader.data_size  # Number of pairs in test set
+data_loader = SKTDataLoader(
+	'data/dcs_data_input_test_sent.txt',
+	'data/dcs_data_output_test_sent.txt',
+	batch_size, seq_length, 
+	split=[1-test_split, 0, test_split]
+)
 
 # In[2]:
-batch_size = 1
-num_test_batches = int(test_set_size*1.0/batch_size)
+num_test_batches = int(data_loader.test_size*1.0/batch_size)
 
 # In[8]:
 
@@ -48,6 +50,8 @@ summary_writer = tf.summary.FileWriter('logs/' + model_name , sess.graph)
 
 sess.run(init)
 saver.restore(sess, 'models/' + model_name)
+
+log_path = 'logs/{}_test.log'.format(model_name)
 
 # In[10]:
 
@@ -68,7 +72,8 @@ for i in range(num_test_batches):
 log_txt = "Test_loss: " + str(round(np.mean(test_losses), 4)) + '+' + str(round(np.std(test_losses), 2)) 
 print(log_txt)
 
-f = open('log.txt', 'a')
+f = open(log_path, 'a')
+f.write('-' * 40 + '\n')
 f.write(log_txt + '\n')
 f.close()
 
@@ -118,8 +123,9 @@ precisions = []
 recalls = []
 accuracies = []
 
-log_name = 'logs/attn_{}_{}_{:.2f}_test.log'.format(num_layers, vocab_size, keep_prob_val)
-f = open('log_name', 'a')
+f = open(log_path, 'a')
+
+f.write('-' * 40 + '\n')
 
 for inp, outp, gen in zip(X_test, y_test, y_out):
 
@@ -139,29 +145,40 @@ for inp, outp, gen in zip(X_test, y_test, y_out):
 	precisions.append(prec)
 	recalls.append(recall)
 
-	log_line = '; '.join([
+	log_line = '%2i:%2i %s\n      %s\n      %s\n' % (
+		int(prec * 100),
+		int(recall * 100),
 		str(inp_raw).replace('\n', '').lstrip(),
 		str(outp_raw).replace('\n', '').lstrip(),
 		str(gen_raw).replace('\n', '').lstrip(),
-		str(prec).replace('\n', ''),
-		str(recall).replace('\n', '')
-	]) + '\n'
+	)
 
 	f.write(log_line)
 
-f.close()
 
 # In[ ]:
 
 avg_prec = np.mean(precisions)*100.0
 avg_recall = np.mean(recalls)*100.0
 f1_score = 2*avg_prec*avg_recall/(avg_prec + avg_recall)
-avg_acc = np.mean(accuracies)
-
+avg_acc = np.mean(accuracies) * 100.0
 
 # In[ ]:
 
-print "Precision: " + str(avg_prec) 
-print "Recall: " + str(avg_recall)
-print "F1_score: " + str(f1_score)
-print "Accuracy: " + str(avg_acc)
+summary_lines = '\n'.join([
+	'%10s: %2.2f' % (m[0], m[1])
+	for m
+	in [
+		["Precision", avg_prec],
+		["Recall", avg_recall],
+		["F1_score", f1_score],
+		["Accuracy", avg_acc],
+	]
+])
+
+print(summary_lines)
+f.write(summary_lines)
+
+f.close()
+
+print('Logged (input, output, generated, prec, rec) into %s' % log_path)
