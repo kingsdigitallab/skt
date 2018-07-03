@@ -13,13 +13,15 @@ learning_rate = 0.001 # Initial learning rate
 keep_prob_val = 0.8 # keep_prob is 1 - dropout i.e., if dropout = 0.2, then keep_prob is 0.8
 float_type=tf.float32
 int_type=np.int32
+save_model = True
 
 if 1:
     num_layers = 2 # Number of layers of RNN
-    num_hidden = 512 # Hidden size of RNN cell
-    batch_size = 32 # Number of sentences in a batch
-    seq_length = 35 # Length of sequence
-    split = [0.02, 0.01, 0] # Splitting proportions into train, valid, test
+    num_hidden = 64 # Hidden size of RNN cell
+    batch_size = 16 # Number of sentences in a batch
+    tiny_sample = batch_size/92712.0
+    split = [tiny_sample * 4, tiny_sample, 0]
+    save_model = False
 
 # Data loading
 
@@ -70,9 +72,11 @@ with tf.name_scope('dropout'):
 
 # In[5]:
 
-cells = [DropoutWrapper(
+cells = [
+    DropoutWrapper(
         BasicLSTMCell(num_hidden), output_keep_prob=keep_prob_val
-    ) for i in range(num_layers)]
+    ) for i in range(num_layers)
+]
 
 stacked_lstm = MultiRNNCell(cells)
 
@@ -95,7 +99,7 @@ tf.summary.scalar('loss', loss)
 
 config = None
 if 0:
-    config = tf.ConfigProto()
+    config = tf.ConfigProto(log_device_placement=True)
     #config.gpu_options.visible_device_list = "0" # (the gpu device that can be used)
     #config.gpu_options.per_process_gpu_memory_fraction = 0.5 # (the percentage of memory used)
     #config.intra_op_parallelism_threads = 2

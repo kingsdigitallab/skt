@@ -132,9 +132,17 @@ class SKTDataLoader(object):
             Uses the complete_data and samples data that statisfies seq_length
         """
         data = []
+        
         for inp, outp in self.complete_data:
             if(len(inp) <= self.seq_length  and len(outp) <= self.seq_length):
                 data.append([inp, outp])
+
+        print('%d sentences out of %d fit into %d-seq' % (
+            len(data),
+            len(self.complete_data),
+            self.seq_length
+        ))
+
         return data
     
     def split_data(self):
@@ -197,19 +205,9 @@ class SKTDataLoader(object):
         """
             Returns batch_data of size 'batch_size' and of corresponding 'data_type'
         """
-        stop = False
-        if data_type == 'train':
-            if(self.cur_index[data_type] + self.batch_size > self.train_size):
-                self.reset_index(data_type = data_type)
-                stop = True
-        if data_type == 'test':
-            if(self.cur_index[data_type] + self.batch_size > self.test_size):
-                self.reset_index(data_type = data_type)
-                stop = True
-        if data_type == 'valid':
-            if(self.cur_index[data_type] + self.batch_size > self.valid_size):
-                self.reset_index(data_type = data_type)
-                stop = True
+        if(self.cur_index[data_type] + self.batch_size > len(self.data_set[data_type])):
+            self.reset_index(data_type)
+
         batch_data = self.data_set[data_type][self.cur_index[data_type] : self.cur_index[data_type] + self.batch_size]
         batch_data = self.encode_batch(batch_data)
         self.cur_index[data_type] += self.batch_size
@@ -217,6 +215,9 @@ class SKTDataLoader(object):
         return np.swapaxes(np.array(batch_data[0]), 0, 1), np.swapaxes(np.array(batch_data[1]), 0, 1)
     
     def random_batch(self, data_type='train'):
+        '''
+            Unused
+        '''
 
         if data_type == 'train':
             temp_index = random.randint(0, self.train_size-self.batch_size-1)
