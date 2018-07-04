@@ -117,16 +117,29 @@ if action == 'tokenise':
 
 def convert_ds(input, output, dst_path):
     print('%s %s' % (input, output))
-    convert_ds_file(input, dst_path)
-    convert_ds_file(output, dst_path)
+    convert_ds_file(input['path'], dst_path)
+    convert_ds_file(output['path'], dst_path, True)
 
-def convert_ds_file(src_path, dst_path):
-    print(src_path)    
+def convert_ds_file(src_path, dst_path, is_output=False):
+    with open('%s/%s' % (dst_path, 'dcs_data_%s_test_sent_cust.txt' % ('output' if is_output else 'input')), 'a') as fo:
+        with open(src_path, 'rt') as fi:
+            content = fi.read()
+            content = re.sub(r'<[^>]*>', r'', content)
+            content = re.sub(r'[/|]', r'\n', content)
+            content = re.sub(r'\s*\n+s*', r'\n', content)
+            if not is_output:
+                content = re.sub(' ', '', content)
+            else:
+                content = re.sub('-', ' ', content)
+            content = re.sub(r'\n+', r'\n', content)
+            content += '\n'
+            fo.write(content)
 
 if action == 'build-ds':
     action_is_valid = True
 
     input_path = '/home/jeff/src/workspace/segskrit/ds/kcl'
+    dst_path = 'data'
     file_info = []
     import glob
     for fp in glob.glob("%s/*.txt" % input_path):
@@ -145,7 +158,7 @@ if action == 'build-ds':
 
         if last is not None:
             if fi['lines'] == last['lines']:
-                convert_ds(last, fi)
+                convert_ds(last, fi, dst_path)
 
                 last = None
                 continue

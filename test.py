@@ -9,6 +9,18 @@ import random
 from tqdm import tqdm # ProgressBar for loops
 from utils.data_loader import SKTDataLoader
 
+def get_intersection_count(la, lb):
+  diff = la[:]
+  for w in lb:
+    try:
+      diff.pop(diff.index(w))
+    except ValueError:
+      pass
+  intersection = len(la) - len(diff)
+  print(la, lb, diff, intersection)
+  return intersection
+
+
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"]=""
 
@@ -125,9 +137,9 @@ for inp, outp, gen in zip(X_test, y_test, y_out):
 		# they should count for 2 in the intersection,
 		# but the code below count them as one!
 		# So the P & R are underestimated.
-		intersection = set(outp).intersection(gen)
+		intersection = len(set(outp).intersection(gen)) * 1.0
 	else:
-		intersection = sum([gen.count(w) for w in outp]) * 1.0
+		intersection = get_intersection_count(outp, gen) * 1.0
 	prec = intersection/len(gen)
 	recall = intersection/len(outp)
 
