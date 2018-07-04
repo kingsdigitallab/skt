@@ -22,6 +22,10 @@ ACTION:
     ARG1 = '4k' or '6k' or '8k'
   rm-model : remove the model
   rm-npy   : remove the numpy data files (can be regenerated)
+  build-ds : build dataset from sentences files
+    ARG1 = mode
+      1 = folder with raw and parse files
+        ARG2 = path
 ''' % (path_src, path_rec))
 
 import sentencepiece as spm
@@ -110,6 +114,44 @@ if action == 'tokenise':
             with open(dir_name+'/'+fn, 'wt') as f2:
                 for line in f:
                     f2.write(' '.join([str(st) for st in s.SampleEncodeAsPieces(line, -1, 0.1)]) + '\n')
+
+def convert_ds(input, output, dst_path):
+    print('%s %s' % (input, output))
+    convert_ds_file(input, dst_path)
+    convert_ds_file(output, dst_path)
+
+def convert_ds_file(src_path, dst_path):
+    print(src_path)    
+
+if action == 'build-ds':
+    action_is_valid = True
+
+    input_path = '/home/jeff/src/workspace/segskrit/ds/kcl'
+    file_info = []
+    import glob
+    for fp in glob.glob("%s/*.txt" % input_path):
+        with open(fp, 'rt') as f:
+            lines = f.readlines()
+            file_info.append({
+                'path': fp, 
+                'lines': len([l for l in lines if len(l.strip()) > 2]),
+                'size': sum([len(l) for l in lines])
+            })
+
+    file_info = sorted(file_info, key=lambda fi: [fi['lines'], fi['size']])
+
+    last = None
+    for fi in file_info:
+
+        if last is not None:
+            if fi['lines'] == last['lines']:
+                convert_ds(last, fi)
+
+                last = None
+                continue
+        
+        last = fi
+    
 
 if not action_is_valid:
    show_help() 

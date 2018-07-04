@@ -21,7 +21,7 @@ if 1:
     batch_size = 16 # Number of sentences in a batch
     tiny_sample = batch_size/92712.0
     split = [tiny_sample * 4, tiny_sample, 0]
-    save_model = False
+    save_model = True
 
 # Data loading
 

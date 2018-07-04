@@ -19,13 +19,14 @@ from arch import (
 	keep_prob,
     loss, num_valid_batches, learning_rate,
 	test_set_size, decode_outputs_test,
-	vocab_size, num_layers
+	vocab_size, num_layers,
+	batch_size
 )
 
-batch_size = 1
+# batch_size = 1
 vocab_size =  data_loader.vocab_size   # Number of unique words in dataset
 
-test_split = 0.01
+test_split = 0.05
 
 data_loader = SKTDataLoader(
 	'data/dcs_data_input_test_sent.txt',
@@ -39,7 +40,8 @@ num_test_batches = int(data_loader.test_size*1.0/batch_size)
 
 # In[8]:
 
-init = tf.initialize_all_variables()
+# init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
 sess = tf.InteractiveSession()
@@ -53,30 +55,12 @@ saver.restore(sess, 'models/' + model_name)
 
 log_path = 'logs/{}_test.log'.format(model_name)
 
+print('test size: %s' % data_loader.test_size)
+
 # In[10]:
 
-test_losses = []
-
-# Testing on test set
-for i in range(num_test_batches):
-	batch_inp, batch_outp = data_loader.next_batch(data_type='test')
-
-	input_dict = {encode_input[t]: batch_inp[t] for t in range(seq_length)}
-	input_dict.update({labels[t]: batch_outp[t] for t in range(seq_length)})
-	input_dict[keep_prob] = 1.0
-
-	loss_val = sess.run(loss, feed_dict=input_dict)
-	test_losses.append(loss_val)
-
-
-log_txt = "Test_loss: " + str(round(np.mean(test_losses), 4)) + '+' + str(round(np.std(test_losses), 2)) 
-print(log_txt)
-
-f = open(log_path, 'a')
-f.write('-' * 40 + '\n')
-f.write(log_txt + '\n')
-f.close()
-
+def sent_from_raw(raw):
+	return str(raw).replace('\n', '').lstrip()
 
 # ### Calculating precision, recall
 
@@ -90,6 +74,8 @@ X_test = []
 y_test = []
 y_out = []
 
+test_losses = []
+
 for i in tqdm(range(num_test_batches)):
 	
 	batch_inp, batch_outp = data_loader.next_batch(data_type='test')
@@ -99,6 +85,7 @@ for i in tqdm(range(num_test_batches)):
 	input_dict[keep_prob] = 1.0
 
 	loss_val, outputs = sess.run([loss, decode_outputs_test], feed_dict = input_dict)
+	test_losses.append(loss_val)
 
 	decoded_outputs = np.array(outputs).transpose([1,0,2])
 	decoded_outputs = np.argmax(outputs, axis = 2)
@@ -116,7 +103,6 @@ for i in tqdm(range(num_test_batches)):
 		y_test.append(outp.split('\xe2\x96\x81'))
 		y_out.append(gen.split('\xe2\x96\x81'))
 
-
 # In[ ]:
 
 precisions = []
@@ -133,24 +119,36 @@ for inp, outp, gen in zip(X_test, y_test, y_out):
 	outp_raw = ' '.join(outp)
 	gen_raw = ' '.join(gen)
 
-	intersection = set(outp).intersection(gen)
-	prec = len(intersection)*1.0/len(gen)
-	recall = len(intersection)*1.0/len(outp)
+	if 0:
+		# GN: Wrong!!!
+		# Some words appear more than once the same sentence,
+		# they should count for 2 in the intersection,
+		# but the code below count them as one!
+		# So the P & R are underestimated.
+		intersection = set(outp).intersection(gen)
+	else:
+		intersection = sum([gen.count(w) for w in outp]) * 1.0
+	prec = intersection/len(gen)
+	recall = intersection/len(outp)
 
 	if outp == gen:
 		accuracies.append(1.0)
 	else:
 		accuracies.append(0.0)
-	
+
 	precisions.append(prec)
 	recalls.append(recall)
+
+	inp_sent = sent_from_raw(inp_raw)
+	outp_sent = sent_from_raw(outp_raw)
+	gen_sent = sent_from_raw(gen_raw)
 
 	log_line = '%2i:%2i %s\n      %s\n      %s\n' % (
 		int(prec * 100),
 		int(recall * 100),
-		str(inp_raw).replace('\n', '').lstrip(),
-		str(outp_raw).replace('\n', '').lstrip(),
-		str(gen_raw).replace('\n', '').lstrip(),
+		inp_sent,
+		outp_sent,
+		gen_sent,
 	)
 
 	f.write(log_line)
@@ -162,6 +160,7 @@ avg_prec = np.mean(precisions)*100.0
 avg_recall = np.mean(recalls)*100.0
 f1_score = 2*avg_prec*avg_recall/(avg_prec + avg_recall)
 avg_acc = np.mean(accuracies) * 100.0
+test_loss = np.mean(test_losses)
 
 # In[ ]:
 
@@ -169,6 +168,7 @@ summary_lines = '\n'.join([
 	'%10s: %2.2f' % (m[0], m[1])
 	for m
 	in [
+		["Loss", test_loss],
 		["Precision", avg_prec],
 		["Recall", avg_recall],
 		["F1_score", f1_score],
